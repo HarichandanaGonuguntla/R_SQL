@@ -1,0 +1,138 @@
+---
+title: "R to SQL_Project_MPG data"
+author: "Harichandana"
+date: "2023-03-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+## 1. To find the mean,medain of 3 columns displ,cty,hwy
+```{r}
+
+library(DBI)
+library(RSQLite)
+library(RPostgreSQL)
+library(tidyverse)
+library(ggplot2)
+
+# 1.0 CONNECT TO SQL DB ----
+
+con <- DBI::dbConnect(
+  RSQLite::SQLite(),
+  dbname = "mpg.sqlite"
+)
+
+con
+
+DBI::dbListTables(con)
+
+# 1.0 WRITE SQL USING R TO FIND THE MEAN, MEDIAN OF 3 COLUMNS
+manufacturer_aggregations_tblcon <- tbl(con, "MPG") %>%
+  group_by(manufacturer) %>%
+  summarise(
+    N = n(),
+    across(.cols = c(displ, cty, hwy),
+           .fns  = list(mean, median), na.rm = TRUE)
+  )
+
+manufacturer_aggregations_tblcon %>% show_query()
+
+# 2.0 RUNNING THE TRANSFORMATION ON THE DATABASE ----
+
+manufacturer_aggregations_tblcon %>% collect()
+
+# 3.0 GETTING SQL AS TEXT ----
+
+manufacturer_aggregations_tblcon %>%
+  show_query() %>%
+  capture.output() %>%
+  .[2:length(.)] %>%
+  str_replace_all("`", "") %>%
+  str_c(collapse = " ")
+```
+
+## 2. To find the no.of cars from each manufacturer
+```{r, echo=FALSE}
+
+table(mpg$manufacturer)
+qplot(manufacturer, data=mpg, geom="bar", fill=manufacturer)
+
+con <- DBI::dbConnect(
+  RSQLite::SQLite(),
+  dbname = "mpg.sqlite"
+)
+
+con
+
+DBI::dbListTables(con)
+
+# 1.0 WRITE SQL USING R TO FIND THE NO.OF CARS FROM EACH MANUFACTURER
+manufacturer_aggregations_tblcon1 <- tbl(con, "MPG") %>%
+  group_by(manufacturer) %>%
+  summarise(
+    N = n()
+  )
+
+manufacturer_aggregations_tblcon1 %>% show_query()
+
+# 3.0 RUNNING THE TRANSFORMATION ON THE DATABASE ----
+
+manufacturer_aggregations_tblcon1 %>% collect()
+
+# 4.0 GETTING SQL AS TEXT ----
+
+manufacturer_aggregations_tblcon1%>%
+  show_query() %>%
+  capture.output() %>%
+  .[2:length(.)] %>%
+  str_replace_all("`", "") %>%
+  str_c(collapse = " ")
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+## 3. To find the manufacturer which has max city and highway mileage
+
+```{r}
+
+con <- DBI::dbConnect(
+  RSQLite::SQLite(),
+  dbname = "mpg.sqlite"
+)
+
+con
+
+DBI::dbListTables(con)
+# 1.0 WRITE SQL USING R TO FIND THE MANUFACTURER WITH HIGHEST CTY,HWY MILEAGE
+manufacturer_aggregations_tblcon2 <- tbl(con, "MPG") %>%
+  group_by(manufacturer) %>%
+  summarise(
+    N = n(),
+    across(.cols = c(cty,hwy),
+           .fns  = list(max), na.rm = TRUE))%>%
+     arrange(desc(cty_1),desc(hwy_1))%>%
+    filter(row_number()==1)
+ 
+          
+manufacturer_aggregations_tblcon2 %>% show_query()
+
+# 2.0 RUNNING THE TRANSFORMATION ON THE DATABASE ----
+
+manufacturer_aggregations_tblcon2 %>% collect()
+
+# 3.0 GETTING SQL AS TEXT ----
+
+manufacturer_aggregations_tblcon2 %>%
+  show_query() %>%
+  capture.output() %>%
+  .[2:length(.)] %>%
+  str_replace_all("`", "") %>%
+  str_c(collapse = " ")
+
+```
